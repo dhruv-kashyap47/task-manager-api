@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Manager Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #0f172a, #1e293b, #0f172a);
+    }
+
+    .glass {
+        backdrop-filter: blur(16px);
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .glow:hover {
+        box-shadow: 0 0 20px rgba(59,130,246,0.5);
+        transform: translateY(-4px);
+    }
+
+    .fade-in {
+        animation: fade 0.4s ease-in-out;
+    }
+
+    @keyframes fade {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+</head>
+
+<body class="text-white min-h-screen p-10 font-sans">
+
+<div class="max-w-6xl mx-auto space-y-10">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            Task Manager Pro
+        </h1>
+        <button onclick="fetchTasks()"
+            class="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl transition glow">
+            Refresh
+        </button>
+    </div>
+
+    <!-- Forms -->
+    <div class="grid md:grid-cols-2 gap-8">
+
+        <!-- Add User -->
+        <div class="glass p-6 rounded-2xl shadow-lg glow transition">
+            <h2 class="text-xl font-semibold mb-4 text-blue-400">Create User</h2>
+            <form id="userForm" class="space-y-4">
+                <input type="number" id="userId" placeholder="User ID"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-blue-500">
+                <input type="text" id="userName" placeholder="Name"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-blue-500">
+                <input type="email" id="userEmail" placeholder="Email"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-blue-500">
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-xl transition">
+                    Create User
+                </button>
+            </form>
+        </div>
+
+        <!-- Add Task -->
+        <div class="glass p-6 rounded-2xl shadow-lg glow transition">
+            <h2 class="text-xl font-semibold mb-4 text-purple-400">Create Task</h2>
+            <form id="taskForm" class="space-y-4">
+                <input type="number" id="taskId" placeholder="Task ID"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-purple-500">
+                <input type="text" id="taskTitle" placeholder="Title"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-purple-500">
+                <input type="text" id="taskDesc" placeholder="Description"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-purple-500">
+                <select id="taskStatus"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-purple-500">
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <input type="number" id="taskUserId" placeholder="Assign User ID"
+                    class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 focus:outline-none focus:border-purple-500">
+                <button type="submit"
+                    class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-xl transition">
+                    Create Task
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Task List -->
+    <div class="glass p-8 rounded-2xl shadow-lg">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-200">All Tasks</h2>
+        <div id="tasksContainer" class="grid md:grid-cols-3 gap-6"></div>
+    </div>
+
+</div>
+
+<script>
+const API_URL = "http://127.0.0.1:8000";
+
+document.getElementById('userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = {
+        id: parseInt(userId.value),
+        name: userName.value,
+        email: userEmail.value
+    };
+
+    const res = await fetch(`${API_URL}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+    });
+
+    alert(res.ok ? "User Created!" : "User ID already exists.");
+});
+
+document.getElementById('taskForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const task = {
+        id: parseInt(taskId.value),
+        title: taskTitle.value,
+        description: taskDesc.value,
+        status: taskStatus.value,
+        user_id: parseInt(taskUserId.value)
+    };
+
+    const res = await fetch(`${API_URL}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task)
+    });
+
+    if(res.ok) {
+        fetchTasks();
+        alert("Task Created!");
+    } else {
+        alert("Error creating task.");
+    }
+});
+
+async function fetchTasks() {
+    const container = document.getElementById('tasksContainer');
+    container.innerHTML = "Loading...";
+
+    const res = await fetch(`${API_URL}/tasks`);
+    const tasks = await res.json();
+
+    container.innerHTML = "";
+
+    if(tasks.length === 0){
+        container.innerHTML = "<p class='text-gray-400'>No tasks yet.</p>";
+        return;
+    }
+
+    tasks.forEach(task => {
+        const badge = task.status === "completed"
+            ? `<span class="px-3 py-1 text-xs rounded-full bg-green-600">Completed</span>`
+            : `<span class="px-3 py-1 text-xs rounded-full bg-yellow-500 text-black">Pending</span>`;
+
+        const card = `
+            <div class="glass p-5 rounded-2xl glow transition fade-in">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-semibold">${task.title}</h3>
+                    ${badge}
+                </div>
+                <p class="text-sm text-gray-300 mb-3">${task.description}</p>
+                <p class="text-xs text-gray-400 mb-4">User ID: ${task.user_id}</p>
+                <button onclick="deleteTask(${task.id})"
+                    class="bg-red-600 hover:bg-red-700 px-4 py-1 text-sm rounded-lg transition">
+                    Delete
+                </button>
+            </div>
+        `;
+        container.innerHTML += card;
+    });
+}
+
+async function deleteTask(id) {
+    if(!confirm("Delete this task?")) return;
+    await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
+    fetchTasks();
+}
+
+fetchTasks();
+</script>
+
+</body>
+</html>
